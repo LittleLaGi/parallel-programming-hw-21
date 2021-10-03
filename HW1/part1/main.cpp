@@ -86,34 +86,34 @@ int main(int argc, char *argv[])
 
   PPLogger.refresh();
 
-  printf("\n\e[1;31mARRAY SUM\e[0m (bonus) \n");
-  if (N % VECTOR_WIDTH == 0)
-  {
-    float sumGold = arraySumSerial(values, N);
-    float sumOutput = arraySumVector(values, N);
+  // printf("\n\e[1;31mARRAY SUM\e[0m (bonus) \n");
+  // if (N % VECTOR_WIDTH == 0)
+  // {
+  //   float sumGold = arraySumSerial(values, N);
+  //   float sumOutput = arraySumVector(values, N);
 
-    if (printLog)
-      PPLogger.printLog();
-    PPLogger.printStats();
+  //   if (printLog)
+  //     PPLogger.printLog();
+  //   PPLogger.printStats();
 
-    printf("************************ Result Verification *************************\n");
+  //   printf("************************ Result Verification *************************\n");
 
-    float epsilon = 0.1;
-    bool sumCorrect = abs(sumGold - sumOutput) < epsilon * 2;
-    if (!sumCorrect)
-    {
-      printf("Expected %f, got %f\n.", sumGold, sumOutput);
-      printf("@@@ ArraySum Failed!!!\n");
-    }
-    else
-    {
-      printf("ArraySum Passed!!!\n");
-    }
-  }
-  else
-  {
-    printf("Must have N %% VECTOR_WIDTH == 0 for this problem (VECTOR_WIDTH is %d)\n", VECTOR_WIDTH);
-  }
+  //   float epsilon = 0.1;
+  //   bool sumCorrect = abs(sumGold - sumOutput) < epsilon * 2;
+  //   if (!sumCorrect)
+  //   {
+  //     printf("Expected %f, got %f\n.", sumGold, sumOutput);
+  //     printf("@@@ ArraySum Failed!!!\n");
+  //   }
+  //   else
+  //   {
+  //     printf("ArraySum Passed!!!\n");
+  //   }
+  // }
+  // else
+  // {
+  //   printf("Must have N %% VECTOR_WIDTH == 0 for this problem (VECTOR_WIDTH is %d)\n", VECTOR_WIDTH);
+  // }
 
   delete[] values;
   delete[] exponents;
