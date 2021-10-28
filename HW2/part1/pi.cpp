@@ -1,6 +1,7 @@
 #include <pthread.h>
 #include <string>
-#include <random>
+#include <cstdlib>
+#include <ctime>
 
 typedef struct
 {
@@ -9,10 +10,6 @@ typedef struct
    long long int end;
    long long int *number_in_circle;
 } Arg;
-
-std::random_device rd;
-std::default_random_engine eng(rd());
-std::uniform_real_distribution<double> distr(-1, 1);
 
 pthread_mutex_t mutexsum;
 long long int *number_in_circle;
@@ -24,14 +21,18 @@ void *count_pi(void *arg){
     const long long int end = args->end;
     long long int *number_in_circle = args->number_in_circle;
 
+    unsigned int seed;
+    srand(time(0));
+    seed = rand(); 
+
     double x;
     double y;
     double distance_squared;
     long long int local_sum = 0;
     long long int toss = start;
     for (; toss < end; ++toss) {
-        x = distr(eng);
-        y = distr(eng);
+        x = (double)rand_r(&seed)/RAND_MAX;
+        y = (double)rand_r(&seed)/RAND_MAX;
         distance_squared = x * x + y * y;
         if ( distance_squared <= 1)
             ++local_sum;
@@ -60,6 +61,7 @@ int main(int argc, char *argv[]){
     
     long long int part = number_of_tosses / num_threads;
     Arg arg[num_threads];
+
     for (int i = 0; i < num_threads; i++)
     {
         arg[i].thread_id = i;
