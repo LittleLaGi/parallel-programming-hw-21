@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <thread>
+#include <chrono>
 
 #include "CycleTimer.h"
 
@@ -35,6 +36,8 @@ void workerThreadStart(WorkerArgs *const args)
     // program that uses two threads, thread 0 could compute the top
     // half of the image and thread 1 could compute the bottom half.
 
+    auto begin = std::chrono::high_resolution_clock::now();
+
     float x0 = args->x0;
     float x1 = args->x1;
     float y0 = args->y0;
@@ -49,7 +52,10 @@ void workerThreadStart(WorkerArgs *const args)
     for (int i = threadId; i < (int)height; i += numThreads)
         mandelbrotSerial(x0, y0, x1, y1, width, height, i, 1, maxIterations, output);
 
-    printf("Hello world from thread %d\n", args->threadId);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin);
+
+    printf("Time measured in thread %d: %.3f mini seconds.\n", threadId, elapsed.count() * 1e-6);
 }
 
 //
