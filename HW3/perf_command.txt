@@ -1,0 +1,6 @@
+# 加 -ggdb 才能看 source annotation
+# perf record -e cpu-clock,cache-misses ./cg (產生記錄檔)
+# perf report (看紀錄)
+# perf annotate --dsos=cg --symbol=conj_grad
+
+http://sandsoftwaresound.net/perf/perf-tutorial-hot-spots/?fbclid=IwAR1UkggY1NFj4C9-l1ZSIj5LFnsdRICBR3cuoRNu68XRoY6gRNwZ9f0S9Ug

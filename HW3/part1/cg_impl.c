@@ -1,4 +1,5 @@
 #include "cg_impl.h"
+#include <omp.h>
 //---------------------------------------------------------------------
 // Floaging point arrays here are named as in spec discussion of
 // CG algorithm
@@ -59,11 +60,11 @@ void conj_grad(int colidx[],
         //       on the Cray t3d - overall speed of code is 1.5 times faster.
         #pragma omp parallel for private(sum)
         for (j = 0; j < lastrow - firstrow + 1; j++)
-        {
+        {       
             sum = 0.0;
             for (k = rowstr[j]; k < rowstr[j + 1]; k++)
             {
-                sum = sum + a[k] * p[colidx[k]];
+                sum += (a[k] * p[colidx[k]]);
             }
             q[j] = sum;
         }
