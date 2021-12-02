@@ -267,6 +267,7 @@ void findPatterns(TreeNode* node, unordered_map<int, vector<TreeNode*>> header, 
         pattern local_prefix = prefix;
         local_prefix.first.push_back(item);
         local_prefix.second = header_count[item];
+        sort(local_prefix.first.begin(), local_prefix.first.end());
         auto iter = patterns.find(local_prefix.first);
         if (iter != patterns.end())
             iter->second += local_prefix.second;
