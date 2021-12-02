@@ -18,9 +18,9 @@ using namespace std;
 using pattern = pair<vector<int>, int>;
 
 void readData(vector<vector<int>>& data);
-void mergeTreeNodes(TreeNode* t1, TreeNode* t2);
+//void mergeTreeNodes(TreeNode* t1, TreeNode* t2);
 //void cleanUp(TreeNode* t, int min_support);
-void freeTreeNodes(TreeNode* root);
+//void freeTreeNodes(TreeNode* root);
 void printFpTree(TreeNode* root);
 TreeNode* createFpTree(vector<vector<int>>& data, int min_support, unordered_map<int, vector<TreeNode*>>& header, unordered_map<int, int>& header_count, vector<int>& pattBaseCount);
 TreeNode* createCondFpTree(TreeNode* root, vector<TreeNode*>& head, int min_support);
@@ -65,25 +65,6 @@ int main(int argc, char *argv[]) {
     unordered_map<int, int> header_count; // key: item, value: sum of the count of every item node
     vector<int> dummy(data.size(), 1);
     TreeNode* root = createFpTree(data, min_support, header, header_count, dummy);
-    printFpTree(root);
-    
-    cout << '\n';
-    for (auto i : header) {
-            cout << i.first << " " << i.second.size() << " ";
-            cout << header_count.find(i.first)->second << '\n';
-    }
-
-    /* sort the header: larger count first */
-    // cout << "---> sort header\n";
-    // vector<pair<int, vector<TreeNode*>>> ordered_header(header.begin(), header.end());
-    // sort(ordered_header.begin(), ordered_header.end(), [&](auto i, auto j){
-    //     int x = i.first;
-    //     int y = j.first;
-    //     if (unordered_items[x] != unordered_items[y])
-    //         return unordered_items[x] > unordered_items[y];
-    //     else
-    //         return x < y;
-    // });
 
     auto end_FpTree = std::chrono::high_resolution_clock::now();
 
@@ -129,42 +110,47 @@ void readData(vector<vector<int>>& data){
     }
 }
 
-void mergeTreeNodes(TreeNode* t1, TreeNode* t2) {
-    t2 = t2->children.begin()->second;
-    if (t2->parent->item == -1)
-        //delete t2->parent;
+// void mergeTreeNodes(TreeNode* t1, TreeNode* t2) {
+//     t2 = t2->children.begin()->second;
+//     if (t2->parent->item == -1)
+//         //delete t2->parent;
 
-    while (t1->getChildrenCount() && t2->getChildrenCount()) {
-        auto p = t1->findChild(t2->item);
-        if (!p)
-            break;
+//     while (t1->getChildrenCount() && t2->getChildrenCount()) {
+//         auto p = t1->findChild(t2->item);
+//         if (!p)
+//             break;
 
-        p->count += t2->count;
-        t1 = p;
-        t2 = t2->children.begin()->second;
-        //delete t2->parent;
-    }
-    t1->addChild(t2);
-    t2->parent = t1;
-}
+//         p->count += t2->count;
+//         t1 = p;
+//         t2 = t2->children.begin()->second;
+//         //delete t2->parent;
+//     }
+//     t1->addChild(t2);
+//     t2->parent = t1;
+// }
 
 TreeNode* createFpTree(vector<vector<int>>& data, int min_support, unordered_map<int, vector<TreeNode*>>& header,
                        unordered_map<int, int>& header_count, vector<int>& pattBaseCount) {
-    cout << "build FP tree\n";
+
     /* remove items with amount smaller than min support */
-    unordered_map<int, int> data_count;
     for (size_t i = 0; i < data.size(); ++i) {
         for (auto j : data[i]) {
-            auto iter = data_count.find(j);
-            if (iter == data_count.end())
-                data_count[j] = pattBaseCount[i];
-            else
-                data_count[j] += pattBaseCount[i];
+            auto iter = header_count.find(j);
+            if (iter == header_count.end())
+                header_count[j] = pattBaseCount[i];
+            else 
+                header_count[j] += pattBaseCount[i];
         }
+    }
+    for (auto iter = header_count.begin(); iter != header_count.end();) {
+        if (iter->second < min_support)
+            iter = header_count.erase(iter);
+        else
+            ++iter;
     }
     for (auto& i : data) {
         for (auto iter = i.begin(); iter != i.end();) {
-            if (data_count[*iter] < min_support)
+            if (header_count.find(*iter) == header_count.end())
                 iter = i.erase(iter);
             else
                 ++iter;
@@ -181,14 +167,6 @@ TreeNode* createFpTree(vector<vector<int>>& data, int min_support, unordered_map
         });
     }
     
-
-    for (auto i : data) {
-        for (auto item : i)
-            cout << item <<" ";
-        cout<<"\n";
-    }
-
-
     /* build FP tree */
     size_t index = 0;
     TreeNode* root = new TreeNode(-1);   
@@ -196,16 +174,14 @@ TreeNode* createFpTree(vector<vector<int>>& data, int min_support, unordered_map
         TreeNode* cur = root;
         TreeNode* child;
         for (auto item : i) {
-            if (header_count.find(item) == header_count.end())
-                header_count[item] = 0;
-            if (!(child = cur->findChild(item))) {
+            child = cur->findChild(item);
+            if (!child) {
                 child = cur->addChild(item);
                 child->parent = cur;
                 header[item].push_back(child);      
             }
 
             child->count += pattBaseCount[index];
-            header_count[item] += pattBaseCount[index];
             cur = child;
         }
         index++;
@@ -269,10 +245,7 @@ void findPatterns(TreeNode* node, unordered_map<int, vector<TreeNode*>> header, 
         local_prefix.second = header_count[item];
         sort(local_prefix.first.begin(), local_prefix.first.end());
         auto iter = patterns.find(local_prefix.first);
-        if (iter != patterns.end())
-            iter->second += local_prefix.second;
-        else
-            patterns.emplace(local_prefix.first, local_prefix.second);
+        patterns.emplace(local_prefix.first, local_prefix.second);
 
         vector<vector<int>> condPattBases;
         vector<int> pattBaseCount;
@@ -287,32 +260,11 @@ void findPatterns(TreeNode* node, unordered_map<int, vector<TreeNode*>> header, 
                 condPattBases.push_back(path);
                 pattBaseCount.push_back(n->count);
             }
-
-
-
-            if (path.size() > 0){
-                cout<< "--- path ---\n";
-                for (auto i : path)
-                    cout<< i<<' ';
-                cout <<" -> " << n->count;
-                cout<< "\n------\n";
-            }
-
         }
 
-
-        cout <<"item: "<< item << '\n';
         unordered_map<int, vector<TreeNode*>> new_header;
         unordered_map<int, int> new_header_count;
         TreeNode* new_tree = createFpTree(condPattBases, min_support, new_header, new_header_count, pattBaseCount);
-
-        
-        printFpTree(new_tree);
-        cout << '\n';
-        for (auto i : new_header) {
-            cout << i.first << " " << i.second.size() << " ";
-            cout << new_header_count.find(i.first)->second << '\n';
-        }
 
         if (new_tree)
             findPatterns(new_tree, new_header, local_prefix, patterns, min_support, new_header_count);
@@ -347,10 +299,10 @@ void printFpTree(TreeNode* root) {
         printFpTree(i.second);  
 }
 
-void freeTreeNodes(TreeNode* root) {
-    if (!root->getChildrenCount())
-        //delete root;
+// void freeTreeNodes(TreeNode* root) {
+//     if (!root->getChildrenCount())
+//         //delete root;
     
-    for (auto& i : root->children)
-        freeTreeNodes(i.second);
-}
+//     for (auto& i : root->children)
+//         freeTreeNodes(i.second);
+// }
