@@ -4,24 +4,6 @@
 
 __global__ void mandelKernel(float lowerX, float lowerY, float stepX, float stepY, int maxIterations,
                              int* Md, int pitch, int group_size) {
-    
-    // __shared__ float _lowerX;
-    // __shared__ float _lowerY;
-    // __shared__ float _stepX;
-    // __shared__ float _stepY;
-    // __shared__ float _maxIterations;
-    
-    // if (threadIdx.x == 0 && threadIdx.y == 0)
-    //     _lowerX = lowerX;
-    // if (threadIdx.x == 0 && threadIdx.y == 1)
-    //     _lowerY = lowerY;
-    // if (threadIdx.x == 0 && threadIdx.y == 2)
-    //     _stepX = stepX;
-    // if (threadIdx.x == 0 && threadIdx.y == 3)
-    //     _stepY = stepY;
-    // if (threadIdx.x == 0 && threadIdx.y == 4)
-    //     _maxIterations = maxIterations;
-    // __syncthreads();
 
     int Row = blockIdx.y * blockDim.y + threadIdx.y;
 
