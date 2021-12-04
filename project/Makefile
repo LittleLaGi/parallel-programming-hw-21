@@ -1,4 +1,4 @@
-PHONY: clean
+.PHONY: clean
 FLAG=-std=c++14 -O3 -m64 -g
 
 all:
