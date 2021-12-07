@@ -205,30 +205,25 @@ void findPatterns_serial(TreeNode* node, unordered_map<int, vector<TreeNode*>> h
     }
 }
 
-int pattern_lock = 1;
 void findPatterns_parallel(TreeNode* node, unordered_map<int, vector<TreeNode*>> header, pattern prefix, map<vector<int>, int>& patterns, int min_support,
                   unordered_map<int, int>& header_count , int deep) {
-                      
+    
+    int pattern_lock = 1;
     #pragma omp parallel
     {
         #pragma omp single
         {
-            map<vector<int>, int> local_patterns ;
-            int local_lock = 1;
-            
+            map<vector<int>, int> local_patterns;        
             for (auto& head : header) {
-                #pragma omp task shared(patterns,pattern_lock) 
+                #pragma omp task shared(patterns, pattern_lock) 
                 {
-
                     int item = head.first;
                     pattern local_prefix = prefix;
                     local_prefix.first.push_back(item);
                     local_prefix.second = header_count[item];
                     sort(local_prefix.first.begin(), local_prefix.first.end());
-                    
-                    auto iter = local_patterns.find(local_prefix.first);
-                    local_patterns.emplace(local_prefix.first, local_prefix.second);
-                    
+
+                    local_patterns.emplace(local_prefix.first, local_prefix.second);      
 
                     vector<vector<int>> condPattBases;
                     vector<int> pattBaseCount;
@@ -252,27 +247,13 @@ void findPatterns_parallel(TreeNode* node, unordered_map<int, vector<TreeNode*>>
                     if (new_tree) {
                         if (deep < 0)
                             findPatterns_parallel(new_tree, new_header, local_prefix, local_patterns, min_support, new_header_count, deep + 1);
-                        else {
-                            map<vector<int>, int> serial_patterns;
-                            findPatterns_serial(new_tree, new_header, local_prefix, serial_patterns, min_support, new_header_count);
-
-                            while(__sync_val_compare_and_swap(&local_lock, 1, 0) == 0);
-                            for (auto& pat : serial_patterns)
-                                local_patterns[pat.first] = pat.second;
-                            local_lock++;
-
-                            // auto r_serial_patterns = move(serial_patterns);
-                            //     findPatterns_serial(new_tree, new_header, local_prefix, serial_patterns, min_support, new_header_count);
-                            //     while(__sync_val_compare_and_swap(&pattern_lock, 1, 0) == 0);                 
-                            //     patterns.insert(r_serial_patterns.begin(), r_serial_patterns.end());
-                        }
+                        else 
+                            findPatterns_serial(new_tree, new_header, local_prefix, local_patterns, min_support, new_header_count);
                     }
-                    #pragma omp taskwait
-
+                    
+                    auto r_local_patterns = move(local_patterns);
                     while(__sync_val_compare_and_swap(&pattern_lock, 1, 0) == 0);
-
-                    for (auto& pat : local_patterns)
-                        patterns[pat.first] = pat.second;
+                    patterns.insert(r_local_patterns.begin(), r_local_patterns.end());
                     pattern_lock++;
                 } // end task
             } // end for
