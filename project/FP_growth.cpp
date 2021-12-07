@@ -204,75 +204,80 @@ void findPatterns_serial(TreeNode* node, unordered_map<int, vector<TreeNode*>> h
             findPatterns_serial(new_tree, new_header, local_prefix, patterns, min_support, new_header_count);
     }
 }
+
 int pattern_lock = 1;
 void findPatterns_parallel(TreeNode* node, unordered_map<int, vector<TreeNode*>> header, pattern prefix, map<vector<int>, int>& patterns, int min_support,
                   unordered_map<int, int>& header_count , int deep) {
                       
     #pragma omp parallel
     {
-        map<vector<int>, int> local_patterns ;
-        int local_lock = 1;
-        
-        for (auto& head : header) {
-            #pragma omp task shared(patterns,pattern_lock) 
-            {
+        #pragma omp single
+        {
+            map<vector<int>, int> local_patterns ;
+            int local_lock = 1;
+            
+            for (auto& head : header) {
+                #pragma omp task shared(patterns,pattern_lock) 
+                {
 
-                int item = head.first;
-                pattern local_prefix = prefix;
-                local_prefix.first.push_back(item);
-                local_prefix.second = header_count[item];
-                sort(local_prefix.first.begin(), local_prefix.first.end());
-                
-                auto iter = local_patterns.find(local_prefix.first);
-                local_patterns.emplace(local_prefix.first, local_prefix.second);
-                
+                    int item = head.first;
+                    pattern local_prefix = prefix;
+                    local_prefix.first.push_back(item);
+                    local_prefix.second = header_count[item];
+                    sort(local_prefix.first.begin(), local_prefix.first.end());
+                    
+                    auto iter = local_patterns.find(local_prefix.first);
+                    local_patterns.emplace(local_prefix.first, local_prefix.second);
+                    
 
-                vector<vector<int>> condPattBases;
-                vector<int> pattBaseCount;
-                for (auto n : head.second) {
-                    vector<int> path;
-                    TreeNode* parent = n->parent;
-                    while (parent != node) {
-                        path.push_back(parent->item);
-                        parent = parent->parent;
+                    vector<vector<int>> condPattBases;
+                    vector<int> pattBaseCount;
+                    for (auto n : head.second) {
+                        vector<int> path;
+                        TreeNode* parent = n->parent;
+                        while (parent != node) {
+                            path.push_back(parent->item);
+                            parent = parent->parent;
+                        }
+                        if (path.size() > 0) {
+                            condPattBases.push_back(path);
+                            pattBaseCount.push_back(n->count);
+                        }
                     }
-                    if (path.size() > 0) {
-                        condPattBases.push_back(path);
-                        pattBaseCount.push_back(n->count);
+
+                    unordered_map<int, vector<TreeNode*>> new_header;
+                    unordered_map<int, int> new_header_count;
+                    TreeNode* new_tree = createFpTree(condPattBases, min_support, new_header, new_header_count, pattBaseCount);
+
+                    if (new_tree) {
+                        if (deep < 0)
+                            findPatterns_parallel(new_tree, new_header, local_prefix, local_patterns, min_support, new_header_count, deep + 1);
+                        else {
+                            map<vector<int>, int> serial_patterns;
+                            findPatterns_serial(new_tree, new_header, local_prefix, serial_patterns, min_support, new_header_count);
+
+                            while(__sync_val_compare_and_swap(&local_lock, 1, 0) == 0);
+                            for (auto& pat : serial_patterns)
+                                local_patterns[pat.first] = pat.second;
+                            local_lock++;
+
+                            // auto r_serial_patterns = move(serial_patterns);
+                            //     findPatterns_serial(new_tree, new_header, local_prefix, serial_patterns, min_support, new_header_count);
+                            //     while(__sync_val_compare_and_swap(&pattern_lock, 1, 0) == 0);                 
+                            //     patterns.insert(r_serial_patterns.begin(), r_serial_patterns.end());
+                        }
                     }
-                }
+                    #pragma omp taskwait
 
-                unordered_map<int, vector<TreeNode*>> new_header;
-                unordered_map<int, int> new_header_count;
-                TreeNode* new_tree = createFpTree(condPattBases, min_support, new_header, new_header_count, pattBaseCount);
+                    while(__sync_val_compare_and_swap(&pattern_lock, 1, 0) == 0);
 
-                if (new_tree) {
-                    if (deep < 0)
-                        findPatterns_parallel(new_tree, new_header, local_prefix, local_patterns, min_support, new_header_count, deep + 1);
-                    else {
-                        map<vector<int>, int> serial_patterns;
-                        findPatterns_serial(new_tree, new_header, local_prefix, serial_patterns, min_support, new_header_count);
-
-                        while(__sync_val_compare_and_swap(&local_lock, 1, 0) == 0);
-                        for (auto& pat : serial_patterns)
-                            local_patterns[pat.first] = pat.second;
-                        local_lock++;
-                        
-                        
-                    }
-                }
-                #pragma omp taskwait
-
-                while(__sync_val_compare_and_swap(&pattern_lock, 1, 0) == 0);
-
-                for (auto& pat : local_patterns)
-                    patterns[pat.first] = pat.second;
-                pattern_lock++;
-
-                
-            }
-        }
-    }
+                    for (auto& pat : local_patterns)
+                        patterns[pat.first] = pat.second;
+                    pattern_lock++;
+                } // end task
+            } // end for
+        } // end single
+    } // end parallel
 }
 
 void printFpTree(TreeNode* root) {
