@@ -178,7 +178,6 @@ void findPatterns_serial(TreeNode* node, unordered_map<int, vector<TreeNode*>> h
         local_prefix.first.push_back(item);
         local_prefix.second = header_count[item];
         sort(local_prefix.first.begin(), local_prefix.first.end());
-        auto iter = patterns.find(local_prefix.first);
         patterns.emplace(local_prefix.first, local_prefix.second);
 
         vector<vector<int>> condPattBases;
@@ -212,17 +211,17 @@ void findPatterns_parallel(TreeNode* node, unordered_map<int, vector<TreeNode*>>
     #pragma omp parallel
     {
         #pragma omp single
-        {
-            map<vector<int>, int> local_patterns;        
+        {             
             for (auto& head : header) {
                 #pragma omp task shared(patterns, pattern_lock) 
-                {
+                {       
                     int item = head.first;
                     pattern local_prefix = prefix;
                     local_prefix.first.push_back(item);
                     local_prefix.second = header_count[item];
                     sort(local_prefix.first.begin(), local_prefix.first.end());
 
+                    map<vector<int>, int> local_patterns;
                     local_patterns.emplace(local_prefix.first, local_prefix.second);      
 
                     vector<vector<int>> condPattBases;
@@ -250,10 +249,8 @@ void findPatterns_parallel(TreeNode* node, unordered_map<int, vector<TreeNode*>>
                         else 
                             findPatterns_serial(new_tree, new_header, local_prefix, local_patterns, min_support, new_header_count);
                     }
-                    
-                    auto r_local_patterns = move(local_patterns);
                     while(__sync_val_compare_and_swap(&pattern_lock, 1, 0) == 0);
-                    patterns.insert(r_local_patterns.begin(), r_local_patterns.end());
+                    patterns.merge(local_patterns);
                     pattern_lock++;
                 } // end task
             } // end for
