@@ -70,6 +70,8 @@ int main(int argc, char *argv[]) {
     cout << "---> find freq patterns\n";
     map<vector<int>, int> patterns;
     pattern pat;
+    omp_set_dynamic(0);     // Explicitly disable dynamic teams
+    omp_set_num_threads(6); // Use n threads for all consecutive parallel regions
     findPatterns_parallel(root, header, pat, patterns, min_support, header_count , 0);
 
     auto end_findPattern = std::chrono::high_resolution_clock::now();
