@@ -23,7 +23,7 @@ void printFpTree(TreeNode* root);
 TreeNode* createFpTree(vector<vector<int>>& data, int min_support, unordered_map<int, vector<TreeNode*>>& header, unordered_map<int, int>& header_count, vector<int>& pattBaseCount);
 TreeNode* createCondFpTree(TreeNode* root, vector<TreeNode*>& head, int min_support);
 void findPatterns_serial(TreeNode* node, unordered_map<int, vector<TreeNode*>> header, pattern prefix, map<vector<int>, int>& patterns, int min_support, unordered_map<int, int>& header_count);
-void findPatterns_parallel(TreeNode* node, unordered_map<int, vector<TreeNode*>> header, pattern prefix, map<vector<int>, int>& patterns, int min_support, unordered_map<int, int>& header_count,int deep);
+void findPatterns_parallel(TreeNode* node, unordered_map<int, vector<TreeNode*>> header, pattern prefix, vector<map<vector<int>, int>*>& patterns, int min_support, unordered_map<int, int>& header_count,int deep);
 
 unordered_map<int, int> unordered_items;  // key: item, value: amount of the item
 int main(int argc, char *argv[]) {
@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 
     /* find freq patterns */
     cout << "---> find freq patterns\n";
-    map<vector<int>, int> patterns;
+    vector<map<vector<int>, int>*> patterns;
     pattern pat;
     omp_set_dynamic(0);     // Explicitly disable dynamic teams
     omp_set_num_threads(6); // Use n threads for all consecutive parallel regions
@@ -77,15 +77,24 @@ int main(int argc, char *argv[]) {
     auto end_findPattern = std::chrono::high_resolution_clock::now();
 
     /* dump the result */
-    cout << "---> dump the result\n";
+    cout << "---> dump the result for test\n";
+    /* merger local patterns */
+    auto pattern_ptr = patterns[0];
+    for (auto iter = patterns.begin(); iter != patterns.end(); ++iter)
+        pattern_ptr->merge(move(**iter));
+    auto final_patterns = *pattern_ptr;
+
     ofstream outputFile;
     outputFile.open ("result.txt");
-    for (auto& p : patterns) {
+    for (auto& p : final_patterns) {
         for (auto item : p.first)
             outputFile << item << " ";
         outputFile << ": " << p.second << "\n";
     }
     outputFile.close();
+
+    for (auto pat_ptr : patterns)
+        delete pat_ptr;
 
     /* print out timing info */
     std::chrono::duration<double> elapsed1 = end_FpTree - start;
@@ -206,7 +215,7 @@ void findPatterns_serial(TreeNode* node, unordered_map<int, vector<TreeNode*>> h
     }
 }
 
-void findPatterns_parallel(TreeNode* node, unordered_map<int, vector<TreeNode*>> header, pattern prefix, map<vector<int>, int>& patterns, int min_support,
+void findPatterns_parallel(TreeNode* node, unordered_map<int, vector<TreeNode*>> header, pattern prefix, vector<map<vector<int>, int>*>& patterns, int min_support,
                   unordered_map<int, int>& header_count , int deep) {
     
     int pattern_lock = 1;
@@ -223,8 +232,8 @@ void findPatterns_parallel(TreeNode* node, unordered_map<int, vector<TreeNode*>>
                     local_prefix.second = header_count[item];
                     sort(local_prefix.first.begin(), local_prefix.first.end());
 
-                    map<vector<int>, int> local_patterns;
-                    local_patterns.emplace(local_prefix.first, local_prefix.second);      
+                    map<vector<int>, int>* local_patterns_ptr = new map<vector<int>, int>;
+                    local_patterns_ptr->emplace(local_prefix.first, local_prefix.second);      
 
                     vector<vector<int>> condPattBases;
                     vector<int> pattBaseCount;
@@ -247,12 +256,12 @@ void findPatterns_parallel(TreeNode* node, unordered_map<int, vector<TreeNode*>>
 
                     if (new_tree) {
                         if (deep < 0)
-                            findPatterns_parallel(new_tree, new_header, local_prefix, local_patterns, min_support, new_header_count, deep + 1);
+                            findPatterns_parallel(new_tree, new_header, local_prefix, patterns, min_support, new_header_count, deep + 1);
                         else 
-                            findPatterns_serial(new_tree, new_header, local_prefix, local_patterns, min_support, new_header_count);
+                            findPatterns_serial(new_tree, new_header, local_prefix, *local_patterns_ptr, min_support, new_header_count);
                     }
                     while(__sync_val_compare_and_swap(&pattern_lock, 1, 0) == 0);
-                    patterns.merge(local_patterns);
+                    patterns.push_back(local_patterns_ptr);
                     pattern_lock++;
                 } // end task
             } // end for
