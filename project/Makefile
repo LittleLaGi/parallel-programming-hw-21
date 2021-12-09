@@ -1,5 +1,5 @@
 .PHONY: clean
-FLAG=-std=c++17 -O3 -m64 -fopenmp -ggdb -pg 
+FLAG=-std=c++17 -O3 -m64 -fopenmp -ggdb
 
 all:
 	g++ $(FLAG) FP_growth.cpp -o FP_growth
