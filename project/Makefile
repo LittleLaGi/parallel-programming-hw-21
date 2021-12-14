@@ -1,8 +1,8 @@
 .PHONY: clean
-FLAG=-std=c++17 -pthread -O3 -m64 -fPIC 
+FLAG=-std=c++14 -O3 -m64
 
 all:
-	g++ $(FLAG) FP_growth_pthread.cpp -o FP_growth
+	g++ $(FLAG) FP_growth.cpp -o FP_growth
 
 test: all
 	./FP_growth 2 < data1.txt
@@ -29,26 +29,6 @@ test_all_data: all
 	diff -u result.txt ans_dataset/ans7.txt > diff/diff7.txt
 	./FP_growth 2 < dataset/data8.txt
 	diff -u result.txt ans_dataset/ans8.txt > diff/diff8.txt
-	./FP_growth 2 < dataset/data9.txt
-	diff -u result.txt ans_dataset/ans9.txt > diff/diff9.txt
-
-test_1: all
-	./FP_growth 2 < dataset/data1.txt
-	diff -u result.txt ans_dataset/ans1.txt > diff/diff1.txt
-
-test_5: all
-	./FP_growth 2 < dataset/data5.txt
-	diff -u result.txt ans_dataset/ans5.txt > diff/diff5.txt
-
-test_7: all
-	./FP_growth 2 < dataset/data7.txt
-	diff -u result.txt ans_dataset/ans7.txt > diff/diff7.txt
-
-test_8: all
-	./FP_growth 2 < dataset/data8.txt
-	diff -u result.txt ans_dataset/ans8.txt > diff/diff8.txt
-
-test_9: all
 	./FP_growth 2 < dataset/data9.txt
 	diff -u result.txt ans_dataset/ans9.txt > diff/diff9.txt
 
